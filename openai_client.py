@@ -1,5 +1,7 @@
 import os
 from dotenv import load_dotenv
+from typing import List
+from models import ChatMessage
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,3 +35,28 @@ async def get_trip_plan(conversation: str):
         resp.raise_for_status()
     answer = resp.json()["choices"][0]["message"]["content"]
     return answer
+
+# Function to handle chat conversations with OpenAI
+async def chat_completion(messages: List[ChatMessage]):
+    url = "https://api.openai.com/v1/chat/completions"
+
+    # Convert our ChatMessage objects to the format expected by OpenAI API
+    formatted_messages = [{"role": msg.role, "content": msg.content} for msg in messages]
+
+    payload = {
+        "model": "gpt-4",  # You can change this to other models like "gpt-3.5-turbo" if needed
+        "messages": formatted_messages,
+        "max_tokens": 1000,
+    }
+
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(url, json=payload, headers=headers, timeout=60)
+        resp.raise_for_status()
+
+    response_content = resp.json()["choices"][0]["message"]["content"]
+    return ChatMessage(role="assistant", content=response_content)
